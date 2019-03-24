@@ -19,5 +19,6 @@ script:
 jobs:
   include:
     - stage: test
-      python: '3.7'
+      python: '3.6'
+      install: pip install tox
       script: tox -e flake8
