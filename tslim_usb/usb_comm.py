@@ -20,15 +20,33 @@ def main():
         print("Couldn't find a suitable connected device. Exiting.")
         return 1
     with serial.Serial(target_port.device) as serial_port:
-        write_request(constants.REQUEST_PUMP_INFO_TYPE, serial_port)
+        write_request(constants.PUMP_SERIAL_TYPE, serial_port)
+        first_byte = struct.unpack(constants.PACKET_BYTE_STRUCT, serial_port.read(1))
+        if first_byte[0] != constants.SYNC_BYTE:
+            print("Unexpected data {:X}!".format(first_byte[0]))
+            return 1
+        read_data(serial_port)
+
+
+
+def write_request(request_val, serial_port):
+    ba = bytearray([0x55, request_val, 0, 0, 0, 0, 0, 0, request_val])
+    serial_port.write(ba)
+
+
+def read_data(serial_port):
+    packet_type = serial_port.read(1)
+    data_length = serial_port.read(1)
+    if packet_type[0] == constants.PUMP_INFO_TYPE:
         data = struct.unpack(constants.PUMP_INFO_STRUCT,
                              serial_port.read(struct.calcsize(constants.PUMP_INFO_STRUCT)))
-        print("Detected a t:slim X2 with serial number {}".format(data[2]))
-
-
-def write_request(request_val, port):
-    ba = bytearray([0x55, request_val, 0, 0, 0, 0, 0, 0, request_val])
-    port.write(ba)
+        print(data)
+    elif packet_type[0] == constants.PUMP_SERIAL_TYPE:
+        data = struct.unpack(constants.PUMP_SERIAL_STRUCT,
+                             serial_port.read(struct.calcsize(constants.PUMP_SERIAL_STRUCT)))
+        print(data)
+    else:
+        print("Unknown packet type 0x{:X}!".format(packet_type))
 
 
 if __name__ == "__main__":
