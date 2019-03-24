@@ -6,7 +6,7 @@ try:
 except:  # pylint: disable=bare-except # noqa: E722 # NOLINT
     from distutils.core import setup  # pylint: disable=wrong-import-order
 
-VERSION = 0.1.0
+VERSION = '0.1.0'
 
 setup(
     author='Chris Reffett',
