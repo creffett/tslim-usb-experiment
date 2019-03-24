@@ -1,0 +1,23 @@
+dist: xenial
+language: python
+python:
+  - '3.6'
+
+cache:
+  - pip
+
+install:
+  - pip install -r requirements.txt
+
+# This stage is run against everything in the matrix (so every python version)
+script:
+  - pip install tox
+  # Borrowed from flask-mongoengine
+  - tox -e $(echo py$TRAVIS_PYTHON_VERSION | tr -d . | sed -e 's/pypypy/pypy/')
+
+
+jobs:
+  include:
+    - stage: test
+      python: '3.7'
+      script: tox -e flake8
