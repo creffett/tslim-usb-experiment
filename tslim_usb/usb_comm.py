@@ -12,7 +12,8 @@ def main():
     for port in list(serial.tools.list_ports.comports()):
         if (port.vid, port.pid) in VENDOR_PRODUCT_WHITELIST:
             if target_port is not None:
-                print("More than one port matches the desired vendor/product pairing, can't figure out which to use!")
+                print("More than one port matches the desired vendor/product pairing,"
+                      "can't figure out which to use!")
                 return 1
             target_port = port
 
@@ -28,7 +29,6 @@ def main():
         read_data(serial_port)
 
 
-
 def write_request(request_val, serial_port):
     ba = bytearray([0x55, request_val, 0, 0, 0, 0, 0, 0, request_val])
     serial_port.write(ba)
@@ -36,7 +36,7 @@ def write_request(request_val, serial_port):
 
 def read_data(serial_port):
     packet_type = serial_port.read(1)
-    data_length = serial_port.read(1)
+    _ = serial_port.read(1)  # data length, to be used in the future
     if packet_type[0] == constants.PUMP_INFO_TYPE:
         data = struct.unpack(constants.PUMP_INFO_STRUCT,
                              serial_port.read(struct.calcsize(constants.PUMP_INFO_STRUCT)))
