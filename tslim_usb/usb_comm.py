@@ -40,13 +40,13 @@ def main():
             continue
         if selection == 1:
             with serial.Serial(target_port.device) as serial_port:
-                write_request(serial_port, packet_types.PumpInfo.get_request_type())
+                write_request(serial_port, packet_types.PumpInfo.get_request_type(), [])
                 data = read_data(serial_port, packet_types.PumpInfo)
                 print("\n")
                 print(data)
         elif selection == 2:
             with serial.Serial(target_port.device) as serial_port:
-                write_request(serial_port, packet_types.PumpSerial.get_request_type())
+                write_request(serial_port, packet_types.PumpSerial.get_request_type(), [])
                 data = read_data(serial_port, packet_types.PumpSerial)
                 print("\n")
                 print(data)
@@ -56,16 +56,26 @@ def main():
     return 0
 
 
-def write_request(serial_port, request_val):
+def write_request(serial_port, request_val, request_data):
     """
     Send a request to the insulin pump.
 
     Args:
         serial_port (:obj:`serial.Serial`): The serial port to write to.
         request_val (int): The value of the request type to use.
+        request_val (`list` of :int:): Additional data bytes to send
     """
-    bytes_to_send = bytearray([0x55, request_val, 0, 0, 0, 0, 0, 0, request_val])
-    serial_port.write(bytes_to_send)
+    # Format of one of these messages is the message type, length of the data, data, 0, 0, 0,
+    # three checksum bytes
+    bytes_to_send = [request_val, len(request_data)] + request_data + [0, 0, 0]
+    checksum = 0
+    for byte in bytes_to_send:
+        checksum += byte
+    # Append the checksum
+    bytes_to_send += [(checksum & 0xFF0000) >> 16, (checksum & 0xFF00) >> 8, checksum & 0xFF]
+    # Prepend the sync byte
+    bytes_to_send = [packet_types.SYNC_BYTE] + bytes_to_send
+    serial_port.write(bytearray(bytes_to_send))
 
 
 def read_data(serial_port, packet_class):
