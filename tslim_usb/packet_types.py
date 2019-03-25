@@ -1,29 +1,37 @@
 import typing
-from collections import namedtuple
+from abc import ABCMeta, abstractmethod
 
 SYNC_BYTE = 0x55
 
 
-class GenericPacket():
+class GenericPacket(metaclass=ABCMeta):
     """Methods common to all packets."""
 
     @classmethod
+    @abstractmethod
     def get_type(cls):
         """Override this with a return of the class's type byte."""
-        pass
+        ...
 
     @classmethod
+    @abstractmethod
     def get_request_type(cls):
         """Override this with a return of the class's request type byte."""
-        pass
+        ...
 
     @classmethod
+    @abstractmethod
     def get_struct(cls):
         """Override this with a return of the class's struct."""
-        pass
+        ...
 
 
-class PumpInfo(typing.NamedTuple, GenericPacket):
+class IntermediaryMeta(type(GenericPacket), type(typing.NamedTuple)):
+    """Intermediary metaclass to fix multiple-metaclass issues...yuck."""
+    pass
+
+
+class PumpInfo(GenericPacket, typing.NamedTuple, metaclass=IntermediaryMeta):
     """
     The contents of packet type 0x51 (Pump Info)
 
@@ -73,7 +81,7 @@ class PumpInfo(typing.NamedTuple, GenericPacket):
         return ret
 
 
-class PumpSerial(typing.NamedTuple, GenericPacket):
+class PumpSerial(GenericPacket, typing.NamedTuple, metaclass=IntermediaryMeta):
     """
     The contents of packet type 0x3d (Pump Serial)
 
