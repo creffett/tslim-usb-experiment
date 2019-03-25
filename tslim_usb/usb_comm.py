@@ -65,7 +65,8 @@ def read_data(serial_port, packet_class):
 
     packet_type = serial_port.read(1)[0]
     if packet_type != packet_class.get_type():
-        print("Expected packet type {:X} but got type {:X}!".format(packet_class.get_type(), packet_type))
+        print("Expected packet type {:X} but got type {:X}!"
+              .format(packet_class.get_type(), packet_type))
     packet_length = int(serial_port.read(1)[0])
     print("Reading {} bytes".format(packet_length))
     data = serial_port.read(packet_length)
