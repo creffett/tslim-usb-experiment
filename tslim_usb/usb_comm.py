@@ -1,3 +1,5 @@
+"""Class to interact with a t:slim X2 via USB."""
+
 import struct
 
 import serial.tools.list_ports
@@ -8,6 +10,9 @@ VENDOR_PRODUCT_WHITELIST = [(1155, 22336)]
 
 
 def main():
+    """Main loop."""
+
+    # Find a serial port
     target_port = None
     for port in list(serial.tools.list_ports.comports()):
         if (port.vid, port.pid) in VENDOR_PRODUCT_WHITELIST:
@@ -21,8 +26,8 @@ def main():
         print("Couldn't find a suitable connected device. Exiting.")
         return 1
 
-    exit = False
-    while not exit:
+    done = False
+    while not done:
         print("Select an option:")
         print("  1) Request pump info")
         print("  2) Request pump serials")
@@ -35,28 +40,47 @@ def main():
             continue
         if selection == 1:
             with serial.Serial(target_port.device) as serial_port:
-                write_request(packet_types.PumpInfo.get_request_type(), serial_port)
+                write_request(serial_port, packet_types.PumpInfo.get_request_type())
                 data = read_data(serial_port, packet_types.PumpInfo)
                 print("\n")
                 print(data)
         elif selection == 2:
             with serial.Serial(target_port.device) as serial_port:
-                write_request(packet_types.PumpSerial.get_request_type(), serial_port)
+                write_request(serial_port, packet_types.PumpSerial.get_request_type())
                 data = read_data(serial_port, packet_types.PumpSerial)
                 print("\n")
                 print(data)
         elif selection == 0:
-            exit = True
+            done = True
 
     return 0
 
 
-def write_request(request_val, serial_port):
-    ba = bytearray([0x55, request_val, 0, 0, 0, 0, 0, 0, request_val])
-    serial_port.write(ba)
+def write_request(serial_port, request_val):
+    """
+    Send a request to the insulin pump.
+
+    Args:
+        serial_port (:obj:`serial.Serial`): The serial port to write to.
+        request_val (int): The value of the request type to use.
+    """
+    bytes_to_send = bytearray([0x55, request_val, 0, 0, 0, 0, 0, 0, request_val])
+    serial_port.write(bytes_to_send)
 
 
 def read_data(serial_port, packet_class):
+    """
+    Read data from the insulin pump.
+
+    Args;
+        serial_port (:obj:`serial.Serial`): The serial port to read from.
+        packet_class (:obj:`class`): The class (derived from packet_types.GenericPacket)
+            describing the class we expect to receive.
+
+    Returns:
+        An instance of packet_class.
+    """
+
     if serial_port.read(1)[0] != packet_types.SYNC_BYTE:
         print("First byte wasn't the expected sync byte!")
         # Flush the serial buffer

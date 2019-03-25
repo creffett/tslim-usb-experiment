@@ -1,3 +1,5 @@
+"""Container types for packet data."""
+
 import typing
 from abc import ABCMeta, abstractmethod
 
@@ -28,7 +30,7 @@ class GenericPacket(metaclass=ABCMeta):
 
 class IntermediaryMeta(type(GenericPacket), type(typing.NamedTuple)):
     """Intermediary metaclass to fix multiple-metaclass issues...yuck."""
-    pass
+    pass  # pylint: disable=unnecessary-pass
 
 
 class PumpInfo(GenericPacket, typing.NamedTuple, metaclass=IntermediaryMeta):
