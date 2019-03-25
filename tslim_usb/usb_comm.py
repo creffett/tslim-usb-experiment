@@ -2,7 +2,7 @@ import struct
 
 import serial.tools.list_ports
 
-import constants
+import packet_types
 
 VENDOR_PRODUCT_WHITELIST = [(1155, 22336)]
 
@@ -20,13 +20,35 @@ def main():
     if target_port is None:
         print("Couldn't find a suitable connected device. Exiting.")
         return 1
-    with serial.Serial(target_port.device) as serial_port:
-        write_request(constants.PUMP_SERIAL_TYPE, serial_port)
-        first_byte = struct.unpack(constants.PACKET_BYTE_STRUCT, serial_port.read(1))
-        if first_byte[0] != constants.SYNC_BYTE:
-            print("Unexpected data {:X}!".format(first_byte[0]))
-            return 1
-        read_data(serial_port)
+
+    exit = False
+    while not exit:
+        print("Select an option:")
+        print("  1) Request pump info")
+        print("  2) Request pump serials")
+        print("  0) Quit")
+        selection_raw = input("Selection: ")
+        try:
+            selection = int(selection_raw)
+        except ValueError:
+            print("Invalid input {}".format(selection_raw))
+            continue
+        if selection == 1:
+            with serial.Serial(target_port.device) as serial_port:
+                write_request(packet_types.PumpInfo.get_request_type(), serial_port)
+                data = read_data(serial_port, packet_types.PumpInfo)
+                print("\n")
+                print(data)
+        elif selection == 2:
+            with serial.Serial(target_port.device) as serial_port:
+                write_request(packet_types.PumpSerial.get_request_type(), serial_port)
+                data = read_data(serial_port, packet_types.PumpSerial)
+                print("\n")
+                print(data)
+        elif selection == 0:
+            exit = True
+
+    return 0
 
 
 def write_request(request_val, serial_port):
@@ -34,19 +56,20 @@ def write_request(request_val, serial_port):
     serial_port.write(ba)
 
 
-def read_data(serial_port):
-    packet_type = serial_port.read(1)
-    _ = serial_port.read(1)  # data length, to be used in the future
-    if packet_type[0] == constants.PUMP_INFO_TYPE:
-        data = struct.unpack(constants.PUMP_INFO_STRUCT,
-                             serial_port.read(struct.calcsize(constants.PUMP_INFO_STRUCT)))
-        print(data)
-    elif packet_type[0] == constants.PUMP_SERIAL_TYPE:
-        data = struct.unpack(constants.PUMP_SERIAL_STRUCT,
-                             serial_port.read(struct.calcsize(constants.PUMP_SERIAL_STRUCT)))
-        print(data)
-    else:
-        print("Unknown packet type 0x{:X}!".format(packet_type))
+def read_data(serial_port, packet_class):
+    if serial_port.read(1)[0] != packet_types.SYNC_BYTE:
+        print("First byte wasn't the expected sync byte!")
+        # Flush the serial buffer
+        serial_port.reset_input_buffer()
+        return None
+
+    packet_type = serial_port.read(1)[0]
+    if packet_type != packet_class.get_type():
+        print("Expected packet type {:X} but got type {:X}!".format(packet_class.get_type(), packet_type))
+    packet_length = int(serial_port.read(1)[0])
+    print("Reading {} bytes".format(packet_length))
+    data = serial_port.read(packet_length)
+    return packet_class._make(struct.unpack(packet_class.get_struct(), data))
 
 
 if __name__ == "__main__":
